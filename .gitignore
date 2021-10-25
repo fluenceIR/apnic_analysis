@@ -1,3 +1,7 @@
-/countries
-/pub_apnic_statc_apnic
+!flag
+/countries/*
+!/countries/flag
+/pub_apnic_static_apnic/*
+!/pub_apnic_static_apnic/flag
 /__pycache__
+/example*

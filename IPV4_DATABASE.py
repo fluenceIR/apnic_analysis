@@ -2,7 +2,7 @@
 # author: Xu Penghao
 # date: 2021/10/19 first create
 #       2021/10/20 space pattern update
-# MD5: C19D5D566CC39DEEFA24800C298398D4
+#       2021/10/25 fix the bug of sub and mul
 ##################################################
 import math
 import time
@@ -88,6 +88,13 @@ class IPV4_DATABASE(object):
         self._ip_totals = 0
     @property
     def ip_totals(self):
+        self._ip_totals = 1
+        assert self._distribute_check()
+        for sp in self.space:
+            if sp[1]==0:
+                self._ip_totals += sp[0]
+            else:
+                self._ip_totals -= sp[0]
         return self._ip_totals
     def loads(self,fh):
         # step1: read the file
@@ -213,7 +220,7 @@ class IPV4_DATABASE(object):
             if advance_list[i][1] == 3:
                 result.space.append([advance_list[i][0],1])
             else:
-                if result.space[-1][1]==1:
+                if result.space.__len__()==0 or result.space[-1][1]==1:
                     result.space.append([advance_list[i][0],0])
                 else:
                     pass
@@ -234,7 +241,7 @@ class IPV4_DATABASE(object):
             if advance_list[i][1] == 2:
                 result.space.append([advance_list[i][0],1])
             else:
-                if result.space[-1][1]==1:
+                if result.space.__len__()==0 or result.space[-1][1]==1:
                     result.space.append([advance_list[i][0],0])
                 else:
                     pass
