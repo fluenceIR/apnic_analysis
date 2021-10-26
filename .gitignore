@@ -5,3 +5,5 @@
 !/pub_apnic_static_apnic/flag
 /__pycache__
 /example*
+*.zip
+report*

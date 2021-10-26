@@ -2,6 +2,7 @@ import os
 import time
 import logging
 from IPV4_DATABASE import IPV4_DATABASE
+from download_apnic import DOWNLOAD_APNIC
 import math
 
 class apnic_database(object):
@@ -40,10 +41,30 @@ class apnic_database(object):
         for key in file_boxs:
             file_boxs[key].close()
     def analysis(self,country,begin_time,end_time):
-        # create the self.analysis_box:list and self.total:IPV4_DATABASE
+        # step1 , check the download
+        download = DOWNLOAD_APNIC()
+        download.work(begin_time,end_time)
+        # step2 , check the preload
+        for i in range(begin_time,end_time):
+            now = time.time()
+            goal = now - 86400*i
+            date_str = time.strftime("%Y%m%d",time.localtime(goal))
+            filename = 'delegated-apnic-{0}'.format(date_str)
+            if os.path.exists('./countries/{0}/{0}_{1}'.format(country,date_str)):
+                print('./countries/{0}/{0}_{1} is already preload'.format(country,date_str))
+                continue
+            extrac_cmd = "7z x ./pub_apnic_static_apnic/{0}/delegated-apnic-{1}.gz".format(date_str[:4],date_str)
+            os.popen(extrac_cmd)
+            time.sleep(2)
+            a
+            self.preload("./delegated-apnic-{1}".format(date_str[:4],date_str),[country])
+            os.remove(filename)
+        # step3 , analysis the country ipdatabase and output the report
+        # step3.1, init the self.analysis_box:list and self.total:IPV4_DATABASE
         now = time.time()
         self.analysis_box.clear()
-        self.total=IPV4_DATABASE('total')
+        self.total_sum = IPV4_DATABASE('total')
+        self.total_mul = IPV4_DATABASE('total')
         for i in range(begin_time,end_time):
             goal = now - 86400*i
             date_str = time.strftime("%Y%m%d",time.localtime(goal))
@@ -53,8 +74,42 @@ class apnic_database(object):
             self.analysis_box['{0}_{1}'.format(country,date_str)]=IPV4_DATABASE('{0}_{1}'.format(country,date_str))
             with open(filepath) as file:
                 self.analysis_box['{0}_{1}'.format(country,date_str)].loads(file)
-            self.total = self.total + self.analysis_box['{0}_{1}'.format(country,date_str)]
-            self.total.name='total'
+            self.total_sum = self.total_sum + self.analysis_box['{0}_{1}'.format(country,date_str)]
+            if self.total_mul.ip_totals!=0:
+                self.total_mul = self.total_mul * self.analysis_box['{0}_{1}'.format(country,date_str)]
+            else:
+                 self.total_mul = self.analysis_box['{0}_{1}'.format(country,date_str)]
+            self.total_sum.name='total_sum'
+            self.total_mul.name='total_mul'
+        goal1=now - 86400*begin_time
+        goal2 = goal1 - 86400*end_time
+        date_str1 = time.strftime("%Y%m%d",time.localtime(goal1))
+        date_str2 = time.strftime("%Y%m%d",time.localtime(goal2))
+        file = open('./report_{0}_{1}_{2}.txt'.format(country,date_str1,date_str2),'w',encoding='utf-8')
+        file.write('analysis of {0} from {1} to {2}\n\n'.format(country,date_str1,date_str2))
+        diff_total=0
+        for i in range(begin_time,end_time-1):
+            goal1=now - 86400*i
+            goal2 = goal1 - 86400
+            date_str1 = time.strftime("%Y%m%d",time.localtime(goal1))
+            date_str2 = time.strftime("%Y%m%d",time.localtime(goal2))
+            if self.analysis_box['CN_{0}'.format(date_str1)]==self.analysis_box['CN_{0}'.format(date_str2)]:
+                print('CN_{0} is equal CN_{1}'.format(date_str1,date_str2))
+            else:
+                after = self.analysis_box['CN_'+date_str1]
+                before = self.analysis_box['CN_'+date_str2]
+                file.write('CN_'+date_str1 +' diff from CN_' + date_str2+':\n')
+                temp = before -after
+                diff_total+=temp.ip_totals
+                for ip in temp.ipgroup:
+                    file.write('  - '+ip.strFullsize()+'\n')
+                temp = after -before
+                diff_total+=temp.ip_totals
+                for ip in temp.ipgroup:
+                    file.write('  + '+ip.strFullsize()+'\n')
+                print('----CN_{0} is not equal CN_{1}'.format(date_str1,date_str2))
+        file.write('\nsummary:\nthe total diff ip is {0}, total ip is {1}, occupies {2:.8%}'.format(diff_total,self.total_sum.ip_totals,diff_total/self.total_sum.ip_totals))
+        file.close()
         
 
 if __name__=='__main__':
@@ -101,7 +156,7 @@ for i in range(1,364):
         for ip in temp.ipgroup:
             file.write('  + '+ip.strFullsize()+'\n')
         print('----CN_{0} is not equal CN_{1}'.format(date_str1,date_str2))
-    file.write('\nsummary:\nthe total diff ip is {0}, total ip is {1}, occupies {2:.8%}'.format(diff_total,a.total.ip_totals,diff_total/a.total.ip_totals))
+file.write('\nsummary:\nthe total diff ip is {0}, total ip is {1}, occupies {2:.8%}'.format(diff_total,a.total.ip_totals,diff_total/a.total.ip_totals))
 file.close()
         
 
